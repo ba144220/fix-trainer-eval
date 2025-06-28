@@ -1,0 +1,6 @@
+[submodule "transformers"]
+	path = transformers
+	url = git@github.com:huggingface/transformers.git
+[submodule "trl"]
+	path = trl
+	url = git@github.com:huggingface/trl.git
