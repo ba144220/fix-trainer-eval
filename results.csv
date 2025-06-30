@@ -1,0 +1,16 @@
+model_name,dataset_name,batch_size,max_seq_length,max_eval_samples,seed,results_csv,eval_loss,eval_model_preparation_time,eval_runtime,eval_samples_per_second,eval_steps_per_second
+Qwen/Qwen2.5-3B,togethercomputer/RedPajama-Data-1T-Sample,1,2048,2048,42,./results.csv,2.430248022079468,0.0002,110.3295,18.563,18.563
+Qwen/Qwen2.5-3B,togethercomputer/RedPajama-Data-1T-Sample,2,2048,2048,42,./results.csv,2.3443350791931152,0.0002,103.9409,19.704,9.852
+Qwen/Qwen2.5-3B,togethercomputer/RedPajama-Data-1T-Sample,4,2048,2048,42,./results.csv,2.3134305477142334,0.0002,106.5396,19.223,4.806
+Qwen/Qwen2.5-3B,togethercomputer/RedPajama-Data-1T-Sample,8,2048,2048,42,./results.csv,2.3056108951568604,0.0002,105.9944,19.322,2.415
+Qwen/Qwen2.5-3B,togethercomputer/RedPajama-Data-1T-Sample,16,2048,2048,42,./results.csv,2.305714130401612,0.0002,89.5843,22.861,1.429
+meta-llama/Llama-3.2-3B,togethercomputer/RedPajama-Data-1T-Sample,1,2048,2048,42,./results.csv,2.269983291625977,0.0001,98.5267,20.786,20.786
+meta-llama/Llama-3.2-3B,togethercomputer/RedPajama-Data-1T-Sample,2,2048,2048,42,./results.csv,2.2134530544281006,0.0001,100.7095,20.336,10.168
+meta-llama/Llama-3.2-3B,togethercomputer/RedPajama-Data-1T-Sample,4,2048,2048,42,./results.csv,2.193699598312378,0.0001,109.2029,18.754,4.689
+meta-llama/Llama-3.2-3B,togethercomputer/RedPajama-Data-1T-Sample,8,2048,2048,42,./results.csv,2.1900854110717773,0.0001,109.6581,18.676,2.335
+meta-llama/Llama-3.2-3B,togethercomputer/RedPajama-Data-1T-Sample,16,2048,2048,42,./results.csv,2.190908670425415,0.0001,92.3253,22.182,1.386
+meta-llama/Llama-3.2-1B,togethercomputer/RedPajama-Data-1T-Sample,1,2048,2048,42,./results.csv,2.456294536590576,0.0489,39.6821,51.61,51.61
+meta-llama/Llama-3.2-1B,togethercomputer/RedPajama-Data-1T-Sample,2,2048,2048,42,./results.csv,2.399322509765625,0.0523,40.5571,50.497,25.248
+meta-llama/Llama-3.2-1B,togethercomputer/RedPajama-Data-1T-Sample,4,2048,2048,42,./results.csv,2.38093376159668,0.0517,42.6132,48.06,12.015
+meta-llama/Llama-3.2-1B,togethercomputer/RedPajama-Data-1T-Sample,8,2048,2048,42,./results.csv,2.3784735202789307,0.0509,43.1495,47.463,5.933
+meta-llama/Llama-3.2-1B,togethercomputer/RedPajama-Data-1T-Sample,16,2048,2048,42,./results.csv,2.378929615020752,0.0499,42.8623,47.781,2.986
