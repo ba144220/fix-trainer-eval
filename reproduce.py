@@ -5,26 +5,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-
 from transformers.models.auto.modeling_auto import AutoModelForCausalLM
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from trl.trl import SFTConfig, SFTTrainer
 from datasets import load_dataset, Dataset
 
-import pandas as pd
-
-def save_results(eval_result, args):
-    args_dict = vars(args)
-    if os.path.exists(args.results_csv):
-        df = pd.read_csv(args.results_csv)
-    else:
-        columns = [str(k) for k in args_dict.keys()] + [str(k) for k in eval_result.keys()]
-        df = pd.DataFrame(columns=pd.Index(columns))
-        
-    df = pd.concat([df, pd.DataFrame([{**args_dict, **eval_result}])], ignore_index=True)
-    df.to_csv(args.results_csv, index=False)
+from utils import save_results
 
 
 def main():
@@ -35,6 +22,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_seq_length", type=int, default=2048)
     parser.add_argument("--max_eval_samples", type=int, default=2048)
+    parser.add_argument("--sort_dataset", type=bool, default=False)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--results_csv", type=str, default="./results.csv")
     args = parser.parse_args()
@@ -47,6 +35,10 @@ def main():
     if not isinstance(dataset, Dataset):
         raise ValueError("Dataset is not a Dataset object")
     dataset = dataset.shuffle(args.seed).select(range(args.max_eval_samples))
+    if args.sort_dataset:
+        dataset = dataset.map(lambda x: {"length": len(x["text"])}, batched=False, num_proc=16)
+        dataset = dataset.sort("length", reverse=True)
+        dataset = dataset.remove_columns("length")
 
     # def preprocess_function(examples):
     #     # texts = [text + tokenizer.eos_token for text in examples["text"]]
