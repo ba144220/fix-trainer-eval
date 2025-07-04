@@ -1,11 +1,13 @@
 import argparse
 import os
 import torch
+import torch.nn as nn
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from transformers.models.auto.modeling_auto import AutoModelForCausalLM
+from transformers.models.llama.modeling_llama import LlamaForCausalLM
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from trl.trl import SFTConfig, SFTTrainer
@@ -13,6 +15,54 @@ from datasets import load_dataset, Dataset
 
 from utils import save_results
 
+def vanilla(model, tokenizer, dataset, args):
+    sft_config = SFTConfig(
+        output_dir="./results",
+        per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
+        dataset_text_field="text",
+        max_seq_length=args.max_seq_length,
+    )
+    trainer = SFTTrainer(
+        model=model,
+        args=sft_config,
+        train_dataset=dataset,
+        eval_dataset=dataset,
+        processing_class=tokenizer,
+    )
+    eval_result = trainer.evaluate()
+    return eval_result
+
+def sft_with_compute_loss(model, tokenizer, dataset, args):
+    sft_config = SFTConfig(
+        output_dir="./results",
+        per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
+        dataset_text_field="text",
+        max_seq_length=args.max_seq_length,
+    )
+    def compute_loss(outputs, labels, num_items_in_batch=None):
+        logits = outputs["logits"].float()
+        
+        # Shift label
+        labels = nn.functional.pad(labels, (0, 1), value=-100)
+        shift_labels = labels[..., 1:].contiguous()
+
+        logits = logits.view(-1, logits.size(-1)) # (batch_size * seq_length, vocab_size)
+        shift_labels = shift_labels.view(-1) # (batch_size * seq_length)
+        loss = nn.functional.cross_entropy(logits, shift_labels, ignore_index=-100, reduction="mean")
+        return loss
+
+    trainer = SFTTrainer(
+        model=model,
+        args=sft_config,
+        train_dataset=dataset,
+        eval_dataset=dataset,
+        processing_class=tokenizer,
+        compute_loss_func=compute_loss,
+    )
+    eval_result = trainer.evaluate()
+    return eval_result
 
 def main():
 
@@ -22,10 +72,13 @@ def main():
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_seq_length", type=int, default=2048)
     parser.add_argument("--max_eval_samples", type=int, default=2048)
-    parser.add_argument("--sort_dataset", type=bool, default=False)
+    parser.add_argument("--sort_dataset", action='store_true', help="Sort dataset by length")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--results_csv", type=str, default="./results.csv")
+    parser.add_argument("--method", type=str, default="vanilla")
     args = parser.parse_args()
+
+    print(f"{args=}")
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=True, device_map="auto", torch_dtype=torch.bfloat16, token=os.getenv("HF_TOKEN"))
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True, token=os.getenv("HF_TOKEN"))
@@ -48,23 +101,13 @@ def main():
 
     # dataset = dataset.map(preprocess_function, batched=True, batch_size=BATCH_SIZE, num_proc=16)
 
-    sft_config = SFTConfig(
-        output_dir="./results",
-        per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
-        dataset_text_field="text",       
-    )
+    if args.method == "vanilla":
+        eval_result = vanilla(model, tokenizer, dataset, args)
+    elif args.method == "sft_with_compute_loss":
+        eval_result = sft_with_compute_loss(model, tokenizer, dataset, args)
+    else:
+        raise ValueError(f"Method {args.method} not supported")
 
-    trainer = SFTTrainer(
-        model=model,
-        args=sft_config,
-        train_dataset=dataset,
-        eval_dataset=dataset,
-        processing_class=tokenizer,
-    )
-
-
-    eval_result = trainer.evaluate()
     print(eval_result)
     save_results(eval_result, args)
 

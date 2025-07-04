@@ -6,6 +6,7 @@ def save_results(eval_result, args):
     args_dict = vars(args)
     # Add timestamp YYYY-MM-DD HH:MM:SS
     args_dict["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{args_dict=}")
     if os.path.exists(args.results_csv):
         df = pd.read_csv(args.results_csv)
     else:
