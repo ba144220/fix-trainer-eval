@@ -64,6 +64,52 @@ def sft_with_compute_loss(model, tokenizer, dataset, args):
     eval_result = trainer.evaluate()
     return eval_result
 
+def correct(model, tokenizer, dataset, args):
+    sft_config = SFTConfig(
+        output_dir="./results",
+        per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
+        dataset_text_field="text",
+        max_seq_length=args.max_seq_length,
+    )
+    def compute_loss(outputs, labels, num_items_in_batch=None):
+        logits = outputs["logits"].float()
+        batch_size = logits.shape[0]
+        
+        # Shift label
+        labels = nn.functional.pad(labels, (0, 1), value=-100)
+        shift_labels = labels[..., 1:].contiguous()
+
+        logits = logits.view(-1, logits.size(-1)) # (batch_size * seq_length, vocab_size)
+        shift_labels = shift_labels.view(-1) # (batch_size * seq_length)
+        loss = nn.functional.cross_entropy(logits, shift_labels, ignore_index=-100, reduction="none") # (batch_size * seq_length)
+        
+        # Reshape loss to (batch_size, seq_length)
+        loss = loss.view(batch_size, -1)
+        shift_labels = shift_labels.view(batch_size, -1) # (batch_size, seq_length)
+
+        # Sum the loss over the sequence length
+        loss = loss.sum(dim=1) # (batch_size)
+        
+        # Normalize the loss by the number of items in each sequence
+        num_items_in_each_sequence = (shift_labels != -100).sum(dim=1) # (batch_size)
+        loss = loss / num_items_in_each_sequence # (batch_size)
+
+        loss = loss.mean()
+
+        return loss
+
+    trainer = SFTTrainer(
+        model=model,
+        args=sft_config,
+        train_dataset=dataset,
+        eval_dataset=dataset,
+        processing_class=tokenizer,
+        compute_loss_func=compute_loss,
+    )
+    eval_result = trainer.evaluate()
+    return eval_result
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -80,7 +126,8 @@ def main():
 
     print(f"{args=}")
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=True, device_map="auto", torch_dtype=torch.bfloat16, token=os.getenv("HF_TOKEN"))
+    # model = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=True, device_map="auto", torch_dtype=torch.bfloat16, token=os.getenv("HF_TOKEN"))
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, trust_remote_code=True, device_map="auto", token=os.getenv("HF_TOKEN"), torch_dtype=torch.bfloat16)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True, token=os.getenv("HF_TOKEN"))
 
     # Load dataset
@@ -105,6 +152,8 @@ def main():
         eval_result = vanilla(model, tokenizer, dataset, args)
     elif args.method == "sft_with_compute_loss":
         eval_result = sft_with_compute_loss(model, tokenizer, dataset, args)
+    elif args.method == "correct":
+        eval_result = correct(model, tokenizer, dataset, args)
     else:
         raise ValueError(f"Method {args.method} not supported")
 

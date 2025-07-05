@@ -2,7 +2,7 @@
 for model_name in meta-llama/Llama-3.2-1B meta-llama/Llama-3.2-3B Qwen/Qwen2.5-3B; do
     for batch_size in 1 2 4 8 16; do
         for sort_dataset in True False; do
-            for method in vanilla sft_with_compute_loss; do
+            for method in correct; do
                 if [ "$sort_dataset" = "True" ]; then
                     python3 reproduce.py \
                         --model_name $model_name \
